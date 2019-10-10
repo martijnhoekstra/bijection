@@ -5,14 +5,13 @@ import com.typesafe.sbt.osgi.SbtOsgi.autoImport._
 import ReleaseTransformations._ // for sbt-release.
 import bijection._
 
-val finagleVersion = "6.45.0"
-
 val scalatestVersion = "3.0.8"
-val scalacheckVersion = "1.13.5"
+val scalacheckVersion = "1.14.0"
 
-val utilVersion = "6.45.0"
-
-val scroogeSerializerVersion = "4.20.0"
+val twitterLibVersion = "19.10.0"
+val finagleVersion = twitterLibVersion
+val utilVersion = twitterLibVersion
+val scroogeSerializerVersion = twitterLibVersion
 
 def util(mod: String) =
   "com.twitter" %% (s"util-$mod") % utilVersion % "provided"
@@ -26,7 +25,7 @@ def scroogeSerializer = {
 
 val buildLevelSettings = Seq(
   organization := "com.twitter",
-  crossScalaVersions := Seq("2.11.12", scalaVersion.value),
+  crossScalaVersions := Seq("2.11.12", scalaVersion.value, "2.13.1"),
   javacOptions ++= Seq("-source", "1.6", "-target", "1.6"),
   javacOptions in doc := Seq("-source", "1.6", "-Xlint:deprecation", "-Xlint:unchecked"),
   scalaVersion := "2.12.10",
@@ -35,13 +34,10 @@ val buildLevelSettings = Seq(
     "-deprecation",
     "-language:implicitConversions",
     "-language:higherKinds",
-    "-language:existentials",
-    "-Xmax-classfile-name",
-    "200"
-    // People using encrypted file-systems can have problems if the names get too long
-    // note changing this parameter will change the binaries
-    // obviously. When the name is too long, it is hashed with
-    // md5.
+    "-language:existentials"
+    //"-Xmax-classfile-name", "200"
+    // People using encrypted file-systems can have problems if the names get
+    // too long, but this feature is no longer supported.
   ),
   resolvers ++= Seq(
     "snapshots" at "https://oss.sonatype.org/content/repositories/snapshots",
@@ -51,6 +47,13 @@ val buildLevelSettings = Seq(
     "org.scalacheck" %% "scalacheck" % scalacheckVersion % "test",
     "org.scalatest" %% "scalatest" % scalatestVersion % "test"
   ),
+  unmanagedSourceDirectories in Compile += {
+    val sourceDir = (sourceDirectory in Compile).value
+    CrossVersion.partialVersion(scalaVersion.value) match {
+      case Some((2, n)) if n >= 13 => sourceDir / "scala-2.13+"
+      case _                       => sourceDir / "scala-2.12-"
+    }
+  },
   parallelExecution in Test := true,
   homepage := Some(url("https://github.com/twitter/bijection")),
   licenses += "Apache 2" -> url("http://www.apache.org/licenses/LICENSE-2.0.txt"),
@@ -456,7 +459,11 @@ lazy val bijectionMacros = {
         "org.scala-lang" % "scala-library" % scalaVersion.value,
         "org.scala-lang" % "scala-reflect" % scalaVersion.value
       ),
-      addCompilerPlugin("org.scalamacros" % "paradise" % "2.1.0" cross CrossVersion.full)
+      libraryDependencies ++= List(
+        compilerPlugin("org.scalamacros" % "paradise" % "2.1.0" cross CrossVersion.full)
+      ).filterNot(_ => scalaVersion.value.startsWith("2.13")),
+      scalacOptions ++= List("-Ymacro-annotations")
+        .filter(_ => scalaVersion.value.startsWith("2.13"))
     )
     .dependsOn(
       bijectionCore
