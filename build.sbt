@@ -9,18 +9,15 @@ val scalatestVersion = "3.0.8"
 val scalacheckVersion = "1.14.0"
 
 val twitterLibVersion = "19.10.0"
-val finagleVersion = twitterLibVersion
-val utilVersion = twitterLibVersion
-val scroogeSerializerVersion = twitterLibVersion
 
 def util(mod: String) =
-  "com.twitter" %% (s"util-$mod") % utilVersion % "provided"
+  "com.twitter" %% (s"util-$mod") % twitterLibVersion % "provided"
 
 def finagle(mod: String) =
-  "com.twitter" %% (s"finagle-$mod") % finagleVersion % "provided"
+  "com.twitter" %% (s"finagle-$mod") % twitterLibVersion % "provided"
 
 def scroogeSerializer = {
-  "com.twitter" %% "scrooge-serializer" % scroogeSerializerVersion % "provided"
+  "com.twitter" %% "scrooge-serializer" % twitterLibVersion % "provided"
 }
 
 val buildLevelSettings = Seq(
