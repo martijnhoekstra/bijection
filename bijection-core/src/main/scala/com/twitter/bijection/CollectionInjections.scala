@@ -16,10 +16,9 @@ limitations under the License.
 
 package com.twitter.bijection
 
-import scala.collection.Factory
-import scala.util.{Success, Try}
+import scala.util.Success
 
-trait CollectionInjections extends StringInjections {
+trait CollectionInjections extends CollectionInjectionsVersionSpecific {
 
   implicit def optionInjection[A, B](
       implicit inj: Injection[A, B]
@@ -72,32 +71,4 @@ trait CollectionInjections extends StringInjections {
       true
     }
 
-  // This is useful for defining injections, but is too general to be implicit
-  def toContainer[A, B, C <: IterableOnce[A], D <: IterableOnce[B]](
-      goodInv: (D, C) => Boolean
-  )(
-      implicit inj: Injection[A, B],
-      cd: Factory[B, D],
-      dc: Factory[A, C]
-  ): Injection[C, D] =
-    new AbstractInjection[C, D] {
-      def apply(c: C): D = {
-        val builder = cd.newBuilder
-        c.iterator.foreach { builder += inj(_) }
-        builder.result()
-      }
-      override def invert(d: D): Try[C] = {
-        val builder = dc.newBuilder
-        d.iterator.foreach { b =>
-          val thisB = inj.invert(b)
-          if (thisB.isSuccess) {
-            builder += thisB.get
-          } else {
-            return InversionFailure.failedAttempt(d)
-          }
-        }
-        val res = builder.result()
-        if (goodInv(d, res)) Success(res) else InversionFailure.failedAttempt(d)
-      }
-    }
 }
